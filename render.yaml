@@ -1,0 +1,77 @@
+# Render Blueprint — deploys the full Hospital ERP stack.
+# To use: push this repo to GitHub, then go to https://dashboard.render.com/blueprints
+# and connect your repo. Render will auto-detect this file.
+#
+# Free tier notes:
+#   - Web services spin down after 15 min of inactivity (cold starts ~30s)
+#   - Free PostgreSQL expires after 90 days (backup & recreate if needed)
+
+databases:
+  - name: hospital-erp-db
+    plan: free
+    databaseName: hospital_erp
+    user: hospital
+
+services:
+  # ---- Backend (Spring Boot) ----
+  - type: web
+    name: hospital-erp-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: hospital-erp-db
+          property: connectionString
+          # Render provides a Postgres connection string; Spring needs JDBC format.
+          # We override this below via a custom start command.
+      - key: DB_HOST
+        fromDatabase:
+          name: hospital-erp-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: hospital-erp-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: hospital-erp-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: hospital-erp-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: hospital-erp-db
+          property: password
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: hospital-erp-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: hospital-erp-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JAVA_OPTS
+        value: "-Xmx256m"
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+    healthCheckPath: /api/v3/api-docs
+
+  # ---- Frontend (React + nginx) ----
+  - type: web
+    name: hospital-erp-frontend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./frontend/Dockerfile.render
+    dockerContext: ./frontend
+    # After first deploy, set BACKEND_URL in the Render dashboard to the
+    # backend's public URL, e.g. https://hospital-erp-backend.onrender.com
+    envVars:
+      - key: BACKEND_URL
+        value: https://hospital-erp-backend.onrender.com

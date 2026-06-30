@@ -1,0 +1,55 @@
+# Production / remote deployment compose file.
+# No build context — pulls pre-built images from a registry.
+#
+# Usage:
+#   REGISTRY=myregistry.azurecr.io docker compose -f docker-compose.deploy.yml up -d
+#
+# Or for offline / tar-based deploys (images already loaded via `docker load`):
+#   docker compose -f docker-compose.deploy.yml up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hospital-erp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-hospital_erp}
+      POSTGRES_USER: ${DB_USER:-hospital}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hospital}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - hospital_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-hospital} -d ${DB_NAME:-hospital_erp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${REGISTRY:+${REGISTRY}/}hospital-erp-backend:${TAG:-latest}
+    container_name: hospital-erp-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME:-hospital_erp}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-hospital}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-hospital}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please-use-32-chars}
+      JAVA_OPTS: ${JAVA_OPTS:-}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  frontend:
+    image: ${REGISTRY:+${REGISTRY}/}hospital-erp-frontend:${TAG:-latest}
+    container_name: hospital-erp-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+
+volumes:
+  hospital_db_data:

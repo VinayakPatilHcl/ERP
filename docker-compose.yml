@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hospital-erp-db
+    environment:
+      POSTGRES_DB: hospital_erp
+      POSTGRES_USER: hospital
+      POSTGRES_PASSWORD: hospital
+    ports:
+      - "5432:5432"
+    volumes:
+      - hospital_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hospital -d hospital_erp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    image: hospital-erp-backend:latest
+    container_name: hospital-erp-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/hospital_erp
+      SPRING_DATASOURCE_USERNAME: hospital
+      SPRING_DATASOURCE_PASSWORD: hospital
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please-use-32-chars}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    image: hospital-erp-frontend:latest
+    container_name: hospital-erp-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  hospital_db_data:
