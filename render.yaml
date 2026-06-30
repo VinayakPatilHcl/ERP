@@ -21,12 +21,6 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     envVars:
-      - key: SPRING_DATASOURCE_URL
-        fromDatabase:
-          name: hospital-erp-db
-          property: connectionString
-          # Render provides a Postgres connection string; Spring needs JDBC format.
-          # We override this below via a custom start command.
       - key: DB_HOST
         fromDatabase:
           name: hospital-erp-db

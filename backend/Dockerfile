@@ -3,8 +3,7 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 COPY pom.xml .
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 \
-    apt-get update && apt-get install -y maven --no-install-recommends && \
+RUN apt-get update && apt-get install -y maven --no-install-recommends && \
     mvn -B -DskipTests clean package && \
     cp target/hospital-erp-backend-*.jar app.jar
 
