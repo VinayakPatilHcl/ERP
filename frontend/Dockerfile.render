@@ -1,11 +1,10 @@
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
-ENV NODE_OPTIONS="--max-old-space-size=256"
 COPY package*.json ./
-RUN npm install --no-optional --ignore-scripts 2>&1 && npx tsc --version
+RUN npm install
 COPY . .
-RUN npx tsc -b && npx vite build
+RUN ./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build
 
 # Serve stage — uses envsubst to inject BACKEND_URL at startup
 FROM nginx:alpine
