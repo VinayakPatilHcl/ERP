@@ -1,10 +1,11 @@
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
+ENV NODE_OPTIONS="--max-old-space-size=256"
 COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN npm install --no-optional --ignore-scripts 2>&1 && npx tsc --version
 COPY . .
-RUN npm run build
+RUN npx tsc -b && npx vite build
 
 # Serve stage — uses envsubst to inject BACKEND_URL at startup
 FROM nginx:alpine
