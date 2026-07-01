@@ -55,7 +55,8 @@ services:
         value: "-Xmx256m"
       - key: SPRING_PROFILES_ACTIVE
         value: render
-    healthCheckPath: /api/v3/api-docs
+      - key: PORT
+        value: "10000"
 
   # ---- Frontend (React + nginx) ----
   - type: web
